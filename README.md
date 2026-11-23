@@ -8,6 +8,22 @@ Jeu d'échecs en 3D : **Mécanos** (orange, jouent en premier) contre **Électri
 
 Le mode en ligne fonctionne depuis ce lien : l'autre joueur doit avoir accès à l'artefact en tant que *Contributeur* (menu Partager).
 
+## Captures
+
+<p>
+  <img src="captures/menu.jpg" width="190" alt="Menu de démarrage">
+  <img src="captures/partie.jpg" width="190" alt="Partie en cours">
+  <img src="captures/deplacements.jpg" width="190" alt="Déplacements possibles">
+  <img src="captures/vue-dessus.jpg" width="190" alt="Vue du dessus">
+</p>
+<p>
+  <img src="captures/combat.jpg" width="190" alt="Combat lors d'une prise">
+  <img src="captures/ciel-coucher.jpg" width="190" alt="Ciel coucher de soleil">
+  <img src="captures/ciel-brume.jpg" width="190" alt="Ciel de brume">
+</p>
+
+Menu de démarrage, partie, déplacements possibles, vue du dessus, combat pendant une prise, ciels Coucher et Brume.
+
 ## Fonctionnalités
 
 - **Modes** : contre l'ordinateur (Débutant, Facile, Moyen, Expert), à deux sur le même téléphone, en ligne avec un code de partie.
