@@ -6,9 +6,13 @@ Jeu d'échecs en 3D : **Mécanos** (orange, jouent en premier) contre **Électri
 
 **[https://gt61113.github.io/Echeque-industriel-/](https://gt61113.github.io/Echeque-industriel-/)**
 
-Ouvre le lien sur ton téléphone ou ton ordinateur : contre l'ordinateur (4 niveaux) ou à deux sur le même appareil.
+Ouvre le lien sur ton téléphone ou ton ordinateur : contre l'ordinateur (4 niveaux), à deux sur le même appareil, ou à deux téléphones en connexion directe.
 
-> La connexion directe (deux téléphones) dépend de la connexion de l'artefact Claude et n'est pas disponible sur ce site.
+### Connexion directe (deux téléphones)
+
+1. Le premier joueur ouvre le jeu, choisit son équipe, touche **Créer une partie** et reçoit un code à 4 lettres.
+2. Le second ouvre le même lien, entre le code et touche **Rejoindre**.
+3. La partie démarre : les coups passent directement d'un navigateur à l'autre (WebRTC avec PeerJS), sans compte ni installation.
 
 ## Captures
 
@@ -28,7 +32,7 @@ Menu de démarrage, partie, déplacements possibles, vue du dessus, combat penda
 
 ## Fonctionnalités
 
-- **Modes** : contre l'ordinateur (Débutant, Facile, Moyen, Expert), à deux sur le même téléphone, en connexion directe entre deux téléphones avec un code de partie.
+- **Modes** : contre l'ordinateur (Débutant, Facile, Moyen, Expert), à deux sur le même téléphone, en connexion directe entre deux navigateurs avec un code de partie.
 - **Personnages animés** et combats différents selon la pièce, au hasard ; durée réglable (Courts, Moyens, Longs). Un toucher passe le combat.
 - **Ambiance** : ciel Jour, Coucher de soleil ou Brume ; plateau flottant, effet poussière, lampes de casque.
 - **Caméra libre** : rotation, vue du dessus, vue basse, zoom, déplacement à deux doigts.

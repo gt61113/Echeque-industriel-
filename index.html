@@ -1642,65 +1642,83 @@ function undo() {
   if (G.mode === 'ai' && G.state.turn !== G.player) aiTurn();
 }
 
-/* ===== EN LIGNE : connexion directe entre deux téléphones (capacité « room ») ===== */
-let ROOM = null;
-const NET = { room: null, code: '', role: '', hostColor: 'w', unsubs: [], timer: null, remoteLog: null, t0: 0 };
-(async () => {
-  try { ROOM = window.claude ? await window.claude.use('room') : null; } catch (e) { ROOM = null; }
-  refreshOnlineUI();
-})();
-function refreshOnlineUI() {
-  $('onCreate').disabled = $('onJoin').disabled = !ROOM;
-  $('onNote').textContent = ROOM
-    ? 'Chacun ouvre ce jeu sur son téléphone. Celui qui crée la partie donne le code à 4 caractères.'
-    : 'La connexion directe n’est pas disponible ici. Ouvre le jeu depuis Claude, connecté à ton compte.';
+/* ===== CONNEXION DIRECTE : navigateur à navigateur (WebRTC via PeerJS), sans compte ===== */
+const PEERJS = ['https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js', 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'];
+const PEER_PREFIX = 'echecs-industriels-';
+const NET = { peer: null, conn: null, code: '', role: '', hostColor: 'w', timer: null, remoteLog: null, t0: 0, gen: 0 };
+function loadPeer() {
+  if (window.Peer) return Promise.resolve();
+  return new Promise((res, rej) => {
+    let i = 0;
+    const one = () => {
+      if (i >= PEERJS.length) return rej(new Error('load'));
+      const s = document.createElement('script'); s.src = PEERJS[i++];
+      s.onload = () => window.Peer ? res() : one(); s.onerror = () => { s.remove(); one(); };
+      document.head.appendChild(s);
+    };
+    one();
+  });
 }
-function makeCode() { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
+function refreshOnlineUI() {
+  $('onCreate').disabled = $('onJoin').disabled = false;
+  $('onNote').textContent = 'Chacun ouvre le jeu dans son navigateur. Celui qui crée la partie donne le code à 4 lettres, la connexion se fait directement entre les deux appareils.';
+}
+function makeCode() { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
 function showOl(title, code, text) {
   $('olTitle').textContent = title; $('olCode').textContent = code; $('olText').textContent = text; $('olModal').hidden = false;
 }
-async function netOpen(code) {
-  netClose();
-  const r = await ROOM.join('echecs-' + code.toLowerCase());
-  NET.room = r; NET.code = code; NET.remoteLog = null; NET.t0 = Date.now();
-  NET.unsubs = [
-    r.on('hello', m => { if (m.sameTab || NET.role !== 'host') return; hostStart(); }),
-    r.on('sync', m => { if (m.sameTab || NET.role !== 'guest') return; onSync(m.data); }),
-    r.on('move', m => { if (m.sameTab) return; if (m.data && Array.isArray(m.data.log)) { NET.remoteLog = m.data.log; syncRemote(); } }),
-    r.onPeers(() => updateNet())
-  ];
-  NET.timer = setInterval(netTick, 2500);
+function netSend(t, data) { try { if (NET.conn && NET.conn.open) NET.conn.send({ t, data }); } catch (e) {} }
+function netUp() { return !!(NET.conn && NET.conn.open); }
+function onNetMsg(m) {
+  if (!m || typeof m !== 'object') return;
+  if (m.t === 'hello' && NET.role === 'host') hostStart();
+  else if (m.t === 'sync' && NET.role === 'guest') onSync(m.data);
+  else if (m.t === 'move' && m.data && Array.isArray(m.data.log)) { NET.remoteLog = m.data.log; syncRemote(); }
+}
+function bindConn(c, gen) {
+  c.on('open', () => {
+    if (gen !== NET.gen) { try { c.close(); } catch (e) {} return; }
+    if (NET.conn && NET.conn !== c) { try { NET.conn.close(); } catch (e) {} }
+    NET.conn = c;
+    if (NET.role === 'guest') { $('olText').textContent = 'Connecté, démarrage…'; netSend('hello', {}); }
+    updateNet();
+  });
+  c.on('data', m => { if (NET.conn === c) onNetMsg(m); });
+  c.on('close', () => { if (NET.conn === c) { NET.conn = null; updateNet(); } });
+  c.on('error', () => {});
 }
 function netClose() {
-  NET.unsubs.forEach(u => { try { u(); } catch (e) {} }); NET.unsubs = [];
+  NET.gen++;
   if (NET.timer) clearInterval(NET.timer); NET.timer = null;
-  if (NET.room) { NET.room.leave().catch(() => {}); NET.room = null; }
-  NET.role = ''; NET.remoteLog = null;
+  try { if (NET.conn) NET.conn.close(); } catch (e) {}
+  try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+  NET.peer = null; NET.conn = null; NET.role = ''; NET.remoteLog = null;
 }
 function hostStart() {
   if (!G.inGame || G.mode !== 'online') startGame('online', { player: NET.hostColor });
-  NET.room.emit('sync', { hostColor: NET.hostColor, log: G.log }).catch(() => {});
+  netSend('sync', { hostColor: NET.hostColor, log: G.log });
 }
 function onSync(d) {
   if (!d || (d.hostColor !== 'w' && d.hostColor !== 'b')) return;
   if (!G.inGame || G.mode !== 'online') startGame('online', { player: other(d.hostColor) });
   if (Array.isArray(d.log) && d.log.length > G.log.length) { NET.remoteLog = d.log; syncRemote(); }
 }
-function emitMove() { if (NET.room) NET.room.emit('move', { log: G.log }).catch(() => {}); }
+function emitMove() { netSend('move', { log: G.log }); }
 function netTick() {
-  if (!NET.room) return;
-  if (NET.role === 'guest' && !(G.inGame && G.mode === 'online')) {
-    NET.room.emit('hello', {}).catch(() => {});
-    if (Date.now() - NET.t0 > 8000) $('olText').textContent = 'Personne ne répond avec ce code. Vérifie le code, et que l’autre joueur a ouvert la partie.';
+  if (!NET.peer) return;
+  if (NET.role === 'guest') {
+    if (!netUp() && NET.peer.open && !NET.peer.destroyed) guestConnect(NET.gen);
+    else if (netUp() && !(G.inGame && G.mode === 'online')) netSend('hello', {});
+    if (!netUp() && !(G.inGame && G.mode === 'online') && Date.now() - NET.t0 > 12000) $('olText').textContent = 'Personne ne répond avec ce code. Vérifie le code, et que l’autre joueur a bien créé la partie.';
   }
   if (G.inGame && G.mode === 'online' && G.log.length && G.state.turn !== G.player && !G.busy) emitMove();
   updateNet();
 }
 function updateNet() {
   const el = $('net');
-  if (G.mode !== 'online' || !G.inGame || !NET.room) { el.hidden = true; return; }
-  const others = NET.room.peers().filter(p => !p.sameTab).length;
-  el.hidden = false; el.textContent = others ? 'Adversaire connecté' : 'Adversaire absent…'; el.dataset.ok = others ? '1' : '0';
+  if (G.mode !== 'online' || !G.inGame || !NET.peer) { el.hidden = true; return; }
+  const ok = netUp();
+  el.hidden = false; el.textContent = ok ? 'Adversaire connecté' : 'Adversaire absent…'; el.dataset.ok = ok ? '1' : '0';
 }
 function syncRemote() {
   const L = NET.remoteLog;
@@ -1726,27 +1744,48 @@ function rebuildFromLog(L) {
   syncPieces(s); refreshHL(); updateHUD();
   if (st === 'mate' || st === 'stalemate' || st === 'draw') endGame(st);
 }
+async function netStart(role, code) {
+  AU.init(); netClose(); const gen = NET.gen;
+  NET.role = role; NET.code = code; NET.remoteLog = null; NET.t0 = Date.now();
+  try { await loadPeer(); } catch (e) { $('onNote').textContent = 'Impossible de charger la connexion directe. Vérifie ta connexion internet.'; NET.role = ''; return false; }
+  if (gen !== NET.gen) return false;
+  return new Promise(res => {
+    const peer = role === 'host' ? new Peer(PEER_PREFIX + code, { debug: 0 }) : new Peer({ debug: 0 });
+    NET.peer = peer;
+    peer.on('open', () => {
+      if (gen !== NET.gen) return;
+      if (role === 'guest') guestConnect(gen);
+      NET.timer = setInterval(netTick, 2500);
+      res(true);
+    });
+    peer.on('connection', c => { if (role === 'host' && gen === NET.gen) bindConn(c, gen); });
+    peer.on('disconnected', () => { if (gen === NET.gen && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} } });
+    peer.on('error', e => {
+      if (gen !== NET.gen) return;
+      if (e.type === 'unavailable-id' && role === 'host') { netClose(); createOnline(); res(false); return; }
+      if (e.type === 'peer-unavailable') { $('olText').textContent = 'Aucune partie trouvée avec ce code. Vérifie le code, et que l’autre joueur a bien créé la partie.'; return; }
+      if (e.type === 'browser-incompatible') { $('olText').textContent = 'Ce navigateur ne permet pas la connexion directe. Essaie avec Chrome ou Safari.'; res(false); return; }
+      if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)) { $('olText').textContent = 'Impossible de joindre le service de mise en relation. Vérifie ta connexion internet.'; res(false); }
+    });
+  });
+}
+function guestConnect(gen) {
+  const p = NET.peer; if (!p || p.destroyed || !p.open || gen !== NET.gen) return;
+  const c = p.connect(PEER_PREFIX + NET.code, { reliable: true, serialization: 'json' });
+  if (c) bindConn(c, gen);
+}
 async function createOnline() {
-  if (!ROOM) return;
-  AU.init();
   const code = makeCode();
-  try {
-    await netOpen(code);
-    NET.role = 'host'; NET.hostColor = G.sideOn;
-    showOl('Partie créée', code, 'Donne ce code à ton adversaire. La partie démarre quand il rejoint. Tu joueras les ' + TEAM[G.sideOn].name + '.');
-  } catch (e) { $('onNote').textContent = 'Impossible de créer la partie (' + (e && e.code ? e.code : 'erreur') + ').'; }
+  NET.hostColor = G.sideOn;
+  const ok = await netStart('host', code);
+  if (ok) showOl('Partie créée', code, 'Donne ce code à ton adversaire. La partie démarre quand il rejoint. Tu joueras les ' + TEAM[G.sideOn].name + '.');
 }
 async function joinOnline() {
-  if (!ROOM) return;
   const code = ($('onCode').value || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{4}$/.test(code)) { $('onNote').textContent = 'Entre le code à 4 caractères.'; return; }
-  AU.init();
-  try {
-    await netOpen(code);
-    NET.role = 'guest';
-    showOl('Connexion…', code, 'Recherche de la partie…');
-    NET.room.emit('hello', {}).catch(() => {});
-  } catch (e) { $('onNote').textContent = 'Impossible de rejoindre (' + (e && e.code ? e.code : 'erreur') + ').'; }
+  if (!/^[A-Z]{4}$/.test(code)) { $('onNote').textContent = 'Entre le code à 4 lettres.'; return; }
+  showOl('Connexion…', code, 'Recherche de la partie…');
+  const ok = await netStart('guest', code);
+  if (!ok) $('olModal').hidden = false;
 }
 
 /* ===== INTERFACE ===== */
@@ -1804,7 +1843,7 @@ $('playAI').addEventListener('click', () => startGame('ai'));
 $('playLocal').addEventListener('click', () => startGame('local'));
 $('onCreate').addEventListener('click', createOnline);
 $('onJoin').addEventListener('click', joinOnline);
-$('onCode').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+$('onCode').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 $('olCancel').addEventListener('click', () => { netClose(); $('olModal').hidden = true; });
 $('btnGear').addEventListener('click', () => { $('panel').hidden = false; });
 $('btnResume').addEventListener('click', () => { $('panel').hidden = true; });
