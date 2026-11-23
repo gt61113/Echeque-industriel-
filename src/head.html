@@ -1,0 +1,227 @@
+<title>Échecs Industriels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap">
+<style>
+/* Concept : un atelier. Plateau en tôle brossée, bandes de danger, coins biseautés. Mécanos en bleu, électriciens en orange. */
+:root {
+  --bg: #101315; --panel: #181c20; --panel2: #22282d; --line: #38414a;
+  --fg: #e9edf0; --muted: #98a4ad; --hazard: #ffb800;
+  --mec: #3b82f6; --elec: #ff6a1a; --ok: #4ade80; --bad: #ef4444;
+  --display: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.4 var(--body); overflow: hidden; -webkit-user-select: none; user-select: none; }
+#app { position: relative; height: 100%; overflow: hidden; }
+#stage { position: absolute; inset: 0; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+
+.btn {
+  font: 700 1.1rem/1 var(--display); letter-spacing: .07em; text-transform: uppercase;
+  color: #15181b; background: var(--hazard); border: 0; padding: .85rem 1.2rem; cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px));
+  min-height: 46px;
+}
+.btn:hover { background: #ffc933; }
+.btn:focus-visible { box-shadow: inset 0 0 0 3px #fff; }
+.btn.ghost { background: var(--panel2); color: var(--fg); box-shadow: inset 0 0 0 2px var(--line); }
+.btn.ghost:hover { background: #2c343b; }
+.btn.small { padding: .6rem .9rem; min-height: 40px; font-size: 1rem; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.wide { width: 100%; }
+
+/* menu */
+#menu {
+  position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: linear-gradient(180deg, rgba(16,19,21,.9) 0, rgba(16,19,21,.6) 55%, rgba(16,19,21,.25) 100%);
+}
+.sheet { width: min(100%, 520px); margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left, 0px)) 36px max(16px, env(safe-area-inset-right, 0px)); }
+.brand h1 { margin: 0; font: 700 clamp(2.6rem, 11vw, 3.8rem)/.92 var(--display); text-transform: uppercase; letter-spacing: .02em; text-wrap: balance; }
+.brand h1 span { color: var(--hazard); display: block; }
+.brand p { margin: .6rem 0 0; font: 600 1.2rem/1.1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.brand p b:first-child { color: var(--mec); } .brand p b:last-child { color: var(--elec); }
+.hazard { height: 8px; margin: 16px 0 18px; background: repeating-linear-gradient(-45deg, var(--hazard) 0 10px, #15181b 10px 20px); }
+.card { background: rgba(24,28,32,.94); border: 1px solid var(--line); padding: 16px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 12px; font: 700 1.25rem/1 var(--display); text-transform: uppercase; letter-spacing: .08em; }
+.card h2 em { font-style: normal; color: var(--muted); font-weight: 600; }
+.lbl { display: block; margin: 12px 0 6px; font: 600 .8rem/1 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; padding: .7rem .4rem; min-height: 44px; background: var(--panel2); border: 2px solid var(--line); cursor: pointer; font: 700 1rem var(--display); letter-spacing: .05em; text-transform: uppercase; }
+.seg button.on { background: var(--hazard); border-color: var(--hazard); color: #15181b; }
+.seg button:focus-visible { outline: 3px solid #fff; outline-offset: 1px; }
+.card .btn { margin-top: 14px; }
+.card.off { opacity: .6; }
+.card.off p { margin: 0; color: var(--muted); font-size: .95rem; }
+.tag { display: inline-block; margin-left: 8px; padding: 3px 7px; font: 700 .75rem var(--display); letter-spacing: .1em; background: var(--panel2); color: var(--hazard); vertical-align: middle; }
+
+/* interrupteurs */
+.tg { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.tg:first-child { border-top: 0; }
+.tg span { min-width: 0; }
+.tg b { display: block; font-weight: 600; }
+.tg small { display: block; color: var(--muted); font-size: .85rem; line-height: 1.25; }
+.tg input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.tg i { flex: none; width: 48px; height: 26px; background: #0e1113; border: 2px solid var(--line); position: relative; transition: background .15s; }
+.tg i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: var(--muted); transition: transform .15s, background .15s; }
+.tg input:checked + i { background: #4a3a05; border-color: var(--hazard); }
+.tg input:checked + i::after { transform: translateX(22px); background: var(--hazard); }
+.tg input:focus-visible + i { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* interface de jeu */
+#hud { position: absolute; inset: 0; pointer-events: none; }
+#hud > * { pointer-events: auto; }
+.top { position: absolute; top: 10px; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; pointer-events: none; }
+.top > * { pointer-events: auto; }
+.pill { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; background: rgba(24,28,32,.92); border: 2px solid var(--line); font: 700 1.05rem var(--display); letter-spacing: .06em; text-transform: uppercase; min-width: 0; }
+.pill #dot { flex: none; width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 2px #0008, 0 0 10px currentColor; }
+#chk { margin-top: 8px; display: inline-block; padding: 6px 12px; background: var(--bad); color: #fff; font: 700 1rem var(--display); letter-spacing: .1em; text-transform: uppercase; animation: pulse 1s infinite alternate; }
+@keyframes pulse { from { opacity: 1; } to { opacity: .55; } }
+.iconbtn { flex: none; width: 44px; height: 44px; display: grid; place-items: center; background: rgba(24,28,32,.92); border: 2px solid var(--line); cursor: pointer; }
+.iconbtn:hover { border-color: var(--hazard); }
+.iconbtn:focus-visible { outline: 3px solid #fff; }
+.bottom { position: absolute; bottom: 12px; left: 0; right: 0; padding: 0 max(12px, env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px); display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.bottom > * { pointer-events: auto; }
+
+.modal { position: absolute; inset: 0; background: rgba(8,10,12,.74); display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.modal .card { width: min(100%, 440px); margin: 0; }
+.modal .row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.modal .row .btn { margin: 0; }
+#endTitle { font-size: 2.2rem; color: var(--hazard); }
+#endText { margin: 0; font-size: 1.1rem; }
+
+.seg.three button { font-size: .95rem; letter-spacing: .03em; padding: .7rem .2rem; min-width: 0; }
+.segblock { margin-bottom: .8rem; }
+#skipHint { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: rgba(21,24,27,.82); color: #fff; padding: .45rem .9rem; font: 700 .85rem var(--display); letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
+.seg.four button { font-size: .92rem; letter-spacing: .02em; padding: .7rem .2rem; min-width: 0; }
+.joinrow { display: flex; gap: 8px; }
+.joinrow input { flex: 1; min-width: 0; min-height: 46px; background: #0e1113; color: var(--fg); border: 2px solid var(--line); padding: 0 12px; font: 700 1.5rem var(--display); letter-spacing: .3em; text-transform: uppercase; text-align: center; -webkit-user-select: text; user-select: text; }
+.joinrow input:focus-visible { outline: 3px solid #fff; outline-offset: 1px; }
+.joinrow .btn { margin: 0; }
+.note { margin: 12px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.35; }
+#net { margin-top: 8px; display: inline-block; padding: 5px 10px; font: 700 .9rem var(--display); letter-spacing: .08em; text-transform: uppercase; background: rgba(24,28,32,.92); border: 2px solid var(--line); }
+#net[data-ok="1"] { color: var(--ok); border-color: #1f6b3a; }
+#net[data-ok="0"] { color: var(--hazard); border-color: #7a5a00; }
+#olCode { margin: 4px 0 12px; font: 700 3.4rem/1 var(--display); letter-spacing: .25em; color: var(--hazard); text-align: center; -webkit-user-select: text; user-select: text; }
+#olText { margin: 0; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { #chk { animation: none; } }
+</style>
+
+<div id="app">
+  <div id="stage"></div>
+
+  <div id="menu">
+    <div class="sheet">
+      <div class="brand">
+        <h1>Échecs <span>Industriels</span></h1>
+        <p><b>Mécanos</b> contre <b>Électriciens</b></p>
+      </div>
+      <div class="hazard"></div>
+
+      <div class="card">
+        <h2>Contre l’ordinateur</h2>
+        <span class="lbl">Difficulté</span>
+        <div class="seg four" id="segDiff">
+          <button type="button" data-v="beginner">Débutant</button>
+          <button type="button" data-v="easy" class="on">Facile</button>
+          <button type="button" data-v="medium">Moyen</button>
+          <button type="button" data-v="expert">Expert</button>
+        </div>
+        <span class="lbl">Ton équipe</span>
+        <div class="seg" id="segSide">
+          <button type="button" data-v="w" class="on">Mécanos</button>
+          <button type="button" data-v="b">Électriciens</button>
+        </div>
+        <button type="button" class="btn wide" id="playAI">Lancer la partie</button>
+      </div>
+
+      <div class="card">
+        <h2>À deux <em>· même téléphone</em></h2>
+        <button type="button" class="btn ghost wide" id="playLocal" style="margin-top:0">Jouer à deux</button>
+      </div>
+
+      <div class="card">
+        <h2>En ligne <em>· deux téléphones</em></h2>
+        <span class="lbl">Ton équipe, si tu crées la partie</span>
+        <div class="seg" id="segSideOn">
+          <button type="button" data-v="w" class="on">Mécanos</button>
+          <button type="button" data-v="b">Électriciens</button>
+        </div>
+        <button type="button" class="btn wide" id="onCreate" disabled>Créer une partie</button>
+        <span class="lbl">Ou rejoindre avec un code</span>
+        <div class="joinrow">
+          <input id="onCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Code de la partie">
+          <button type="button" class="btn ghost" id="onJoin" disabled>Rejoindre</button>
+        </div>
+        <p class="note" id="onNote">Connexion…</p>
+      </div>
+
+      <div class="card">
+        <h2>Ambiance</h2>
+        <div id="menuSegs"></div>
+      </div>
+
+      <div class="card">
+        <h2>Réglages</h2>
+        <div id="menuToggles"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="skipHint" hidden>Touche pour passer le combat</div>
+  <div id="hud" hidden>
+    <div class="top">
+      <div style="min-width:0">
+        <div class="pill"><span id="dot"></span><span id="turnTxt"></span></div>
+        <div id="chk" hidden>Échec !</div>
+        <div id="net" hidden></div>
+      </div>
+      <button type="button" class="iconbtn" id="btnGear" aria-label="Réglages et menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e9edf0" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5l1.6 2.6 3-.7.9 2.9 2.9.9-.7 3 2.6 1.6-2.6 1.6.7 3-2.9.9-.9 2.9-3-.7L12 21.5l-1.6-2.6-3 .7-.9-2.9-2.9-.9.7-3L2.7 12l2.6-1.6-.7-3 2.9-.9.9-2.9 3 .7z"/></svg>
+      </button>
+    </div>
+    <div class="bottom">
+      <button type="button" class="btn ghost small" id="btnTop">Vue du dessus</button>
+      <button type="button" class="btn ghost small" id="btnSide">Vue joueur</button>
+      <button type="button" class="btn ghost small" id="btnLow">Vue basse</button>
+      <button type="button" class="btn ghost small" id="btnUndo">Annuler</button>
+    </div>
+  </div>
+
+  <div class="modal" id="panel" hidden>
+    <div class="card">
+      <h2>Pause</h2>
+      <div id="panelSegs"></div>
+      <div id="panelToggles"></div>
+      <div class="row">
+        <button type="button" class="btn wide" id="btnResume">Reprendre</button>
+        <button type="button" class="btn ghost wide" id="btnNew">Nouvelle partie</button>
+        <button type="button" class="btn ghost wide" id="btnMenu">Menu principal</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="olModal" hidden>
+    <div class="card">
+      <h2 id="olTitle"></h2>
+      <div id="olCode"></div>
+      <p id="olText"></p>
+      <div class="row"><button type="button" class="btn ghost wide" id="olCancel">Annuler</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="end" hidden>
+    <div class="card">
+      <h2 id="endTitle"></h2>
+      <p id="endText"></p>
+      <div class="row">
+        <button type="button" class="btn wide" id="endAgain">Rejouer</button>
+        <button type="button" class="btn ghost wide" id="endMenu">Menu principal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
