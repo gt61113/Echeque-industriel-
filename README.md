@@ -13,6 +13,7 @@ Ouvre le lien sur ton téléphone ou ton ordinateur : contre l'ordinateur (4 niv
 1. Le premier joueur ouvre le jeu, choisit son équipe, touche **Créer une partie** et reçoit un code à 4 lettres.
 2. Le second ouvre le même lien, entre le code et touche **Rejoindre**.
 3. La partie démarre : les coups passent directement d'un navigateur à l'autre (WebRTC avec PeerJS), sans compte ni installation.
+4. Si la liaison directe ne s'établit pas au bout de 7 secondes (réseaux d'entreprise, certaines connexions mobiles), le jeu bascule automatiquement sur une passerelle internet publique (MQTT). Le jeu reste le même, seul le trajet des messages change.
 
 ## Captures
 
