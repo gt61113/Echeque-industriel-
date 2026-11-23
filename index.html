@@ -142,7 +142,7 @@ button { font: inherit; color: inherit; }
       </div>
 
       <div class="card">
-        <h2>En ligne <em>· deux téléphones</em></h2>
+        <h2>Connexion directe <em>· deux téléphones</em></h2>
         <span class="lbl">Ton équipe, si tu crées la partie</span>
         <div class="seg" id="segSideOn">
           <button type="button" data-v="w" class="on">Mécanos</button>
@@ -1653,7 +1653,7 @@ function refreshOnlineUI() {
   $('onCreate').disabled = $('onJoin').disabled = !ROOM;
   $('onNote').textContent = ROOM
     ? 'Chacun ouvre ce jeu sur son téléphone. Celui qui crée la partie donne le code à 4 caractères.'
-    : 'Le mode en ligne n’est pas disponible ici. Ouvre le jeu depuis Claude, connecté à ton compte.';
+    : 'La connexion directe n’est pas disponible ici. Ouvre le jeu depuis Claude, connecté à ton compte.';
 }
 function makeCode() { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
 function showOl(title, code, text) {
