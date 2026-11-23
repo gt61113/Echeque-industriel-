@@ -4,9 +4,11 @@ Jeu d'échecs en 3D : **Mécanos** (orange, jouent en premier) contre **Électri
 
 ## ▶ Jouer
 
-**[Ouvrir le jeu](https://claude.ai/artifact/6gLTDqg1C8wcbgMKiBMHGH)** (dans l'app Claude ou le navigateur, compte connecté).
+**[https://gt61113.github.io/Echeque-industriel-/](https://gt61113.github.io/Echeque-industriel-/)**
 
-Le mode en ligne fonctionne depuis ce lien : l'autre joueur doit avoir accès à l'artefact en tant que *Contributeur* (menu Partager).
+Ouvre le lien sur ton téléphone ou ton ordinateur : contre l'ordinateur (4 niveaux) ou à deux sur le même appareil.
+
+> Le mode en ligne (deux téléphones) dépend de la connexion de l'artefact Claude et n'est pas disponible sur ce site.
 
 ## Captures
 
@@ -37,7 +39,3 @@ Menu de démarrage, partie, déplacements possibles, vue du dessus, combat penda
 
 - `index.html` : le jeu complet en un seul fichier (Three.js chargé depuis cdnjs).
 - `src/` : sources séparées (moteur d'échecs et IA, audio, scène, pièces, animations, interface).
-
-## Jouer hors de Claude
-
-Ouvrir `index.html` dans un navigateur suffit pour jouer contre l'ordinateur ou à deux. Le mode en ligne dépend de la connexion de l'artefact Claude et ne marche pas en dehors.
